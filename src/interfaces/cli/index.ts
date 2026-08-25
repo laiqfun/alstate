@@ -1,2 +1,1 @@
-export { runCli } from "./run-cli.js";
-
+export { runCli, type CliOptions } from "./run-cli.js";
