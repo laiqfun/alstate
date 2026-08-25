@@ -153,6 +153,6 @@ The CLI currently exits without output because commands have not yet been implem
 
 ## Development Status
 
-The TypeScript scaffold, stable domain contracts, initial content modules, RelatedMeanings validation, append-only import strategy, complete FSRS adapter, SQLite migrations, and repository implementations are complete. The project passes type checking, compilation, and its test suite. The next stage is application use cases and transaction orchestration.
+The TypeScript scaffold, stable domain contracts, content and import modules, complete FSRS adapter, SQLite persistence, and transactional application services are implemented. The project passes type checking, compilation, and its test suite. The next stage is the CLI and file-import interface.
 
 The data model and APIs are still subject to change.

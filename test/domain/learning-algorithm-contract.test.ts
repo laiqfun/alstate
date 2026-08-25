@@ -13,6 +13,9 @@ const algorithm: LearningAlgorithm = {
   name: "contract-test",
   version: "1",
   ratings: [again, good],
+  parseState(data) {
+    return data;
+  },
   initialize(at) {
     return { dueAt: new Date(at), stateData: { reviews: 0 } };
   },
@@ -50,4 +53,3 @@ test("LearningAlgorithm contract supports initialization and review", () => {
   assert.deepEqual(result.state.stateData, { reviews: 1 });
   assert.deepEqual(result.reviewData, { rating: "good" });
 });
-

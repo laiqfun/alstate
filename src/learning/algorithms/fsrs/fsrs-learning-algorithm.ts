@@ -81,6 +81,10 @@ export class FsrsLearningAlgorithm
     this.configuration = serializeParameters(parameters);
   }
 
+  public parseState(data: JsonObject): FsrsStateData {
+    return parseFsrsStateData(data);
+  }
+
   public initialize(at: Date): AlgorithmStateSnapshot<FsrsStateData> {
     requireValidDate(at, "initialization time");
     const card = createEmptyCard(at);

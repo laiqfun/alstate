@@ -32,6 +32,8 @@ export interface LearningAlgorithm<
   readonly version: string;
   readonly ratings: readonly AlgorithmRating[];
 
+  parseState(data: JsonObject): StateData;
+
   initialize(at: Date): AlgorithmStateSnapshot<StateData>;
 
   preview(
@@ -50,4 +52,3 @@ export interface LearningAlgorithm<
     at: Date,
   ): number | null;
 }
-
