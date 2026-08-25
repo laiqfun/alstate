@@ -105,7 +105,7 @@ The directories currently contain only module boundaries and entry points. Domai
 
 ## Requirements
 
-- Node.js 22 or later
+- Node.js 22.13 or later
 - npm
 
 ## Getting Started
@@ -153,6 +153,6 @@ The CLI currently exits without output because commands have not yet been implem
 
 ## Development Status
 
-The TypeScript scaffold, stable domain contracts, initial content modules, RelatedMeanings validation, append-only import strategy, and complete FSRS adapter are implemented. The project passes type checking, compilation, and its test suite. The next stage is SQLite persistence.
+The TypeScript scaffold, stable domain contracts, initial content modules, RelatedMeanings validation, append-only import strategy, complete FSRS adapter, SQLite migrations, and repository implementations are complete. The project passes type checking, compilation, and its test suite. The next stage is application use cases and transaction orchestration.
 
 The data model and APIs are still subject to change.

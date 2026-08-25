@@ -202,22 +202,22 @@ ReviewRecord
 id                  PK
 learning_item_id    FK -> LearningItem.id ON DELETE CASCADE
 algorithm_id        FK -> LearningAlgorithm.id
-rating              INTEGER NOT NULL
+rating              TEXT NOT NULL
 review_data         JSON NOT NULL
 response_time_ms    INTEGER
 reviewed_at         TEXT NOT NULL
 ```
 
-For FSRS, ratings are:
+For FSRS, domain rating values are:
 
 ```text
-1 = Again
-2 = Hard
-3 = Good
-4 = Easy
+again
+hard
+good
+easy
 ```
 
-`review_data` preserves the complete FSRS review log needed for history, replay, analysis, and future parameter optimization.
+`review_data` preserves the complete FSRS review log, including its numeric FSRS Rating, needed for history, replay, analysis, and future parameter optimization.
 
 ## Import Contract
 
