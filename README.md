@@ -62,6 +62,10 @@ SQLite / file storage
 
 See [Architecture Design](docs/architecture.md) and [Data Model Design](docs/data-model.md) for the current design.
 
+### FSRS
+
+The built-in FSRS adapter uses the official [`ts-fsrs`](https://github.com/open-spaced-repetition/ts-fsrs) implementation. It exposes all four FSRS ratings, preserves the complete card state and review log as JSON, records the implementation version, and keeps third-party types behind Alstate's own learning-algorithm contract.
+
 ## Project Structure
 
 ```text
@@ -149,6 +153,6 @@ The CLI currently exits without output because commands have not yet been implem
 
 ## Development Status
 
-The TypeScript scaffold, stable domain contracts, initial content modules, RelatedMeanings validation, and append-only import strategy are complete. The project passes type checking, compilation, and its test suite. The next stage is to implement the complete FSRS adapter before persistence or user-facing commands.
+The TypeScript scaffold, stable domain contracts, initial content modules, RelatedMeanings validation, append-only import strategy, and complete FSRS adapter are implemented. The project passes type checking, compilation, and its test suite. The next stage is SQLite persistence.
 
 The data model and APIs are still subject to change.
