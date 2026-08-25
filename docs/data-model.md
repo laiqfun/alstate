@@ -177,12 +177,15 @@ LearningState
 id                  PK
 learning_item_id    FK -> LearningItem.id ON DELETE CASCADE
 algorithm_id        FK -> LearningAlgorithm.id
+due_at               TEXT NOT NULL
 state_data          JSON NOT NULL
 
 UNIQUE (learning_item_id, algorithm_id)
 ```
 
 For FSRS, `state_data` preserves the complete card state returned by the selected FSRS implementation rather than a project-specific subset.
+
+`due_at` is a queryable projection of the next due time contained in the algorithm state. It must be indexed so due items can be selected without scanning JSON.
 
 ## ReviewRecord
 

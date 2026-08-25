@@ -4,7 +4,7 @@ Alstate is a modular learning-state engine for building adaptive learning applic
 
 It is intended to support applications such as vocabulary trainers and flashcard systems by separating learning items, scheduling decisions, content modules, import policies, and user interfaces into independent layers.
 
-> Alstate is currently in the scaffolding stage. The architecture is defined, but business features and public APIs have not yet been implemented.
+> Alstate is currently in early development. The architecture and core domain contracts are defined, but user-facing business features have not yet been implemented.
 
 ## Current Scope
 
@@ -89,9 +89,12 @@ alstate/
 │  │  │  └─ related-meanings/
 │  │  └─ importing/
 │  └─ index.ts
+├─ test/
+│  └─ domain/
 ├─ package.json
 ├─ tsconfig.json
-└─ tsconfig.build.json
+├─ tsconfig.build.json
+└─ tsconfig.test.json
 ```
 
 The directories currently contain only module boundaries and entry points. Domain models, repositories, algorithms, commands, and database implementations will be added incrementally.
@@ -132,7 +135,7 @@ The CLI currently exits without output because commands have not yet been implem
 | `npm run typecheck` | Check TypeScript types without emitting files. |
 | `npm run build` | Compile the project into `dist/`. |
 | `npm start` | Run the compiled CLI entry point. |
-| `npm test` | Run the Node.js test runner. No tests exist yet. |
+| `npm test` | Compile and run the Node.js test suite. |
 
 ## Design Principles
 
@@ -146,6 +149,6 @@ The CLI currently exits without output because commands have not yet been implem
 
 ## Development Status
 
-The TypeScript project scaffold is complete and passes type checking and compilation. The next stage is to define stable domain contracts before implementing persistence or user-facing commands.
+The TypeScript scaffold and stable domain contracts are complete. The project passes type checking, compilation, and its domain test suite. The next stage is to implement content modules and import-strategy contracts before persistence or user-facing commands.
 
 The data model and APIs are still subject to change.

@@ -14,7 +14,7 @@
     "build": "tsc --project tsconfig.build.json",
     "dev": "tsx src/interfaces/cli/main.ts",
     "start": "node dist/interfaces/cli/main.js",
-    "test": "node --test",
+    "test": "tsc --project tsconfig.test.json && node --test \".test-dist/test/**/*.test.js\"",
     "typecheck": "tsc --project tsconfig.json --noEmit"
   },
   "engines": {
