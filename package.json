@@ -1,0 +1,28 @@
+{
+  "name": "alstate",
+  "version": "0.0.0",
+  "private": true,
+  "description": "A modular learning-state engine.",
+  "type": "module",
+  "bin": {
+    "alstate": "./dist/interfaces/cli/main.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc --project tsconfig.build.json",
+    "dev": "tsx src/interfaces/cli/main.ts",
+    "start": "node dist/interfaces/cli/main.js",
+    "test": "node --test",
+    "typecheck": "tsc --project tsconfig.json --noEmit"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@types/node": "^26.3.0",
+    "tsx": "^4.23.12",
+    "typescript": "^7.0.2"
+  }
+}
