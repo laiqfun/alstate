@@ -8,11 +8,16 @@
     "alstate": "./dist/interfaces/cli/main.js"
   },
   "files": [
-    "dist"
+    "dist",
+    "docs"
   ],
   "scripts": {
     "build": "tsc --project tsconfig.build.json",
+    "check": "npm run typecheck && npm run build && npm test",
+    "clean": "node --eval \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
     "dev": "tsx src/interfaces/cli/main.ts",
+    "prebuild": "npm run clean",
+    "pretest": "node --eval \"require('node:fs').rmSync('.test-dist', { recursive: true, force: true })\"",
     "start": "node dist/interfaces/cli/main.js",
     "test": "tsc --project tsconfig.test.json && node --test \".test-dist/test/**/*.test.js\"",
     "typecheck": "tsc --project tsconfig.json --noEmit"

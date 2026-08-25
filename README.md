@@ -4,7 +4,7 @@ Alstate is a modular learning-state engine for building adaptive learning applic
 
 It is intended to support applications such as vocabulary trainers and flashcard systems by separating learning items, scheduling decisions, content modules, import policies, and user interfaces into independent layers.
 
-> Alstate is currently in early development. The architecture and core domain contracts are defined, but user-facing business features have not yet been implemented.
+> Alstate is currently an early MVP. Its data model and APIs may still change.
 
 ## Current Scope
 
@@ -20,7 +20,7 @@ Within the English-vocabulary learning scenario, Alstate is designed to help app
 - When should an item be reviewed again?
 - How should learner feedback update its learning state?
 
-The initial implementation will focus on:
+The MVP includes:
 
 - a command-line interface;
 - learning-item management for English meanings;
@@ -94,14 +94,19 @@ alstate/
 │  │  └─ importing/
 │  └─ index.ts
 ├─ test/
-│  └─ domain/
+│  ├─ application/
+│  ├─ domain/
+│  ├─ infrastructure/
+│  ├─ interfaces/
+│  ├─ learning/
+│  └─ modules/
 ├─ package.json
 ├─ tsconfig.json
 ├─ tsconfig.build.json
 └─ tsconfig.test.json
 ```
 
-The directories currently contain only module boundaries and entry points. Domain models, repositories, algorithms, commands, and database implementations will be added incrementally.
+The source tree contains the complete MVP implementation; future features should continue to respect these layer boundaries.
 
 ## Requirements
 
@@ -116,10 +121,10 @@ Install the development dependencies:
 npm install
 ```
 
-Run the empty CLI entry point during development:
+Show the CLI help during development:
 
 ```bash
-npm run dev
+npm run dev -- help
 ```
 
 Build and run the compiled entry point:
@@ -129,13 +134,16 @@ npm run build
 npm start
 ```
 
-The CLI currently exits without output because commands have not yet been implemented.
+By default, data is stored in `.alstate/alstate.db` under the current working directory. Set `ALSTATE_DB_PATH` to use another database file.
+
+See the [CLI Guide](docs/cli.md) for commands, module schemas, a complete workflow, and the JSON import format.
 
 ## Scripts
 
 | Command | Description |
 | --- | --- |
 | `npm run dev` | Run the TypeScript CLI entry point. |
+| `npm run check` | Run type checking, build, and all tests. |
 | `npm run typecheck` | Check TypeScript types without emitting files. |
 | `npm run build` | Compile the project into `dist/`. |
 | `npm start` | Run the compiled CLI entry point. |
@@ -153,6 +161,6 @@ The CLI currently exits without output because commands have not yet been implem
 
 ## Development Status
 
-The TypeScript scaffold, stable domain contracts, content and import modules, complete FSRS adapter, SQLite persistence, and transactional application services are implemented. The project passes type checking, compilation, and its test suite. The next stage is the CLI and file-import interface.
+The English-vocabulary learning CLI MVP is implemented. It includes modular content, RelatedMeanings validation, append-only JSON import, complete FSRS scheduling, SQLite persistence, transactional application services, and end-to-end tests.
 
 The data model and APIs are still subject to change.
