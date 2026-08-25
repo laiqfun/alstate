@@ -1,458 +1,298 @@
 # Alstate Architecture Design
 
-> **Current scope:** This architecture is designed for learning English vocabulary. Its systems, entities, modules, and review flows are modeled around words. Supporting other kinds of learning content is a possible future direction, not a capability assumed by the current design.
+> **Current profile:** The first application profile is English-vocabulary learning. The core architecture is organized around reusable `LearningItem`, content-module, learning-algorithm, import-strategy, and repository contracts.
 
 ## Architecture Overview
 
-Alstate is designed as a modular learning system.
+Alstate is a modular learning system. Its core does not assume that a display value such as a word uniquely identifies something being learned.
 
-The system separates:
+The vocabulary profile follows one central rule:
 
-- **Domain Layer**: core entities and business concepts
-- **Module Layer**: extensible content modules
-- **Learning Layer**: learning algorithms and user learning state
-- **Infrastructure Layer**: database and external services
-- **Interface Layer**: user interaction methods
+> One `LearningItem` represents one English meaning of a spelling.
 
-Overall structure:
+Two LearningItems may therefore have the same `word` value while carrying different English meanings and independent learning states.
 
 ```text
-                    CLI / UI
-                      |
-                      |
-                Application Layer
-                      |
-        --------------------------------
-        |              |               |
-   Word System   Learning System   Module System
-        |              |               |
-        --------------------------------
-                      |
-                Infrastructure
-                      |
-                  Database
+                       CLI / UI
+                          |
+                   Application Layer
+                          |
+        +-----------------+-----------------+
+        |                 |                 |
+  Learning Items     Learning System   Module System
+        |                 |                 |
+        +-----------------+-----------------+
+                          |
+                 Repository Contracts
+                          |
+                  Infrastructure Layer
+                          |
+                  SQLite / File Storage
 ```
 
----
+## Layer Design
 
-# Layer Design
+### 1. Domain Layer
 
-## 1. Domain Layer
+The Domain Layer contains stable business concepts and contracts. It does not depend on SQLite, the CLI, file formats, or a concrete FSRS package.
 
-The domain layer contains core concepts.
-
-It does not depend on:
-
-- database implementation
-- CLI interface
-- AI services
-
-Core entities:
+Core concepts:
 
 ```text
-Word
-
+LearningItem
 ModuleDefinition
-
-WordContent
-
+LearningItemContent
 Tag
-
 LearningAlgorithm
-
 LearningState
-
 ReviewRecord
+ImportStrategy
 ```
 
----
+`LearningItem.id` is the identity. In the vocabulary profile, `LearningItem.word` is case-sensitive, may contain a phrase, and is not unique.
 
-## 2. Word System
+### 2. Learning Item System
 
-Responsible for vocabulary entities.
+The Learning Item System is responsible for:
 
-Responsibilities:
-
-- store words
-- provide word identity
-- connect words with content modules
-- connect words with tags
-
-Structure:
+- creating and identifying independently scheduled items;
+- connecting items with content modules and tags;
+- keeping item identity separate from display content;
+- deleting item-owned content and learning data as one aggregate.
 
 ```text
-Word
-
- |
- |
- +---- WordContent
-
- |
- |
- +---- WordTag ---- Tag
+LearningItem
+   |
+   +---- LearningItemContent
+   |
+   +---- LearningItemTag ---- Tag
+   |
+   +---- LearningState
+   |
+   +---- ReviewRecord
 ```
 
-The Word entity itself does not contain:
-
-- translation
-- examples
-- learning progress
-
----
-
-## 3. Module System
-
-The module system provides extensible word content.
-
-A module consists of:
+For English vocabulary, one item corresponds to one meaning:
 
 ```text
-ModuleDefinition
-
-        +
-
-WordContent
+LearningItem #101: bank -> a financial institution
+LearningItem #102: bank -> the side of a river
 ```
 
-Relationship:
+The repeated `word` value does not indicate a duplicate.
+
+### 3. Module System
+
+Content modules attach directly to a LearningItem. English meaning is no longer a structural parent for other content.
 
 ```text
-ModuleDefinition
-        |
-        |
-        ↓
-WordContent
-        |
-        |
-        ↓
-Word
+LearningItem
+   |
+   +---- EnglishMeaning
+   +---- ChineseMeaning
+   +---- Example
+   +---- Audio
+   +---- MemoryNote
+   +---- RelatedMeanings
 ```
 
-Example modules:
+All content records are siblings owned by the same LearningItem. A module defines its own schema and validation rules without changing the LearningItem structure.
 
-```text
-ChineseMeaning
+#### RelatedMeanings Module
 
-EnglishMeaning
+`RelatedMeanings` links a LearningItem to other LearningItems that represent other English meanings of the same spelling. It uses LearningItem IDs rather than treating the spelling as identity.
 
-Example
+The module owns validation of its references. Deleting an item must also remove references to that item.
 
-Audio
+### 4. Learning System
 
-MemoryNote
-```
+The Learning System determines:
 
-A developer can define new modules without changing the Word structure.
-
----
-
-## 4. Learning System
-
-Responsible for determining:
-
-- what to review
-- when to review
-- how to evaluate memory
-
-Components:
+- which LearningItem is due;
+- when it should be reviewed again;
+- how a rating changes its learning state;
+- what review history must be recorded.
 
 ```text
 LearningAlgorithm
-
         |
-
-        ↓
-
-LearningState
-
+        v
+LearningState ---- LearningItem
         |
-
-        ↓
-
+        v
 ReviewRecord
 ```
 
----
+#### LearningAlgorithm Contract
 
-## LearningAlgorithm
+The contract keeps scheduling independent of the concrete algorithm package. An implementation must be able to:
 
-Defines a learning strategy.
+- initialize state for a new LearningItem;
+- calculate review options;
+- apply a selected rating;
+- calculate the next due time;
+- expose retrievability where supported;
+- preserve algorithm version, parameters, state, and review log data.
 
-Examples:
+#### FSRS Module
 
-```text
-Simple Review
+The initial implementation uses FSRS completely rather than a simplified imitation.
 
-SM2
+The FSRS module:
 
-AI Adaptive Learning
-```
+- supports the four ratings `Again`, `Hard`, `Good`, and `Easy`;
+- preserves the complete FSRS card state and review log;
+- records the algorithm and implementation version;
+- allows FSRS parameters to be configured and upgraded explicitly;
+- adapts the maintained TypeScript implementation behind the project-owned LearningAlgorithm contract.
 
-Different algorithms can have different state structures.
+The Domain Layer does not expose third-party package types, so the FSRS implementation can be upgraded without changing application use cases.
 
----
+### 5. Application Layer
 
-## LearningState
-
-Stores the current state of learning.
-
-Example:
-
-```json
-{
-    "review_count": 5,
-    "next_review": "2026-09-01"
-}
-```
-
----
-
-## ReviewRecord
-
-Stores historical learning events.
-
-Used for:
-
-- algorithm optimization
-- learning analysis
-- error analysis
-
----
-
-# 5. Application Layer
-
-The application layer coordinates user operations.
-
-Examples:
+The Application Layer coordinates use cases such as:
 
 ```text
-Review Word
-
-Import Vocabulary
-
-Add Content Module
-
+Create Learning Item
+Manage Item Content
+Link Related Meanings
+Import Learning Items
+Review Learning Item
 Modify Learning Settings
 ```
 
-It connects:
+It coordinates domain contracts and transaction boundaries without containing CLI presentation or SQL.
+
+### 6. Interface Layer
+
+The first interface is a CLI. It receives commands, displays content, collects one of the four FSRS ratings, and presents application results.
+
+The Interface Layer does not schedule reviews or access SQLite directly.
+
+### 7. Infrastructure Layer
+
+The Infrastructure Layer provides concrete implementations for:
 
 ```text
-User Command
-
-        ↓
-
-Application Service
-
-        ↓
-
-Domain Model
+SQLite repositories
+Database migrations
+File access
 ```
 
----
-
-# 6. Interface Layer
-
-The first interface is CLI.
-
-Responsibilities:
-
-- receive user commands
-- display learning content
-- collect user responses
-
-Example:
+Repository direction:
 
 ```text
-$ alstate review
-
-distinction
-
-Meaning?
-
-> 区别
-
-Result:
-
-Remember / Forget
+Domain Repository Contract
+            |
+            v
+Infrastructure Implementation
+            |
+            v
+          SQLite
 ```
 
-The interface does not contain learning logic.
+## Import Strategy
 
----
-
-# 7. Infrastructure Layer
-
-Provides external implementations.
-
-Components:
+Import identity and conflict handling are extension policies, not fixed domain behavior.
 
 ```text
-Database
-
-File Storage
+External Source
+      |
+      v
+Import Parser
+      |
+      v
+ImportStrategy
+      |
+      v
+Create LearningItem and Content
 ```
 
-Example:
+The default strategy is append-only:
 
-```text
-SQLite
+- every valid imported record creates a new LearningItem;
+- no record is skipped, overwritten, merged, or deduplicated;
+- `word` is never used as an item identity key.
 
-        ↓
+Developers may provide another ImportStrategy later to implement source-specific identity, conflict detection, merging, skipping, or overwriting.
 
-Repository
+## Data Flows
 
-        ↓
-
-Domain Layer
-```
-
----
-
-# Repository Design
-
-The domain layer does not directly access the database.
-
-Example:
-
-```text
-WordRepository
-
-LearningRepository
-
-ModuleRepository
-```
-
-Structure:
-
-```text
-Domain
-
-    |
-
-Repository Interface
-
-    |
-
-Database Implementation
-```
-
----
-
-# Data Flow
-
-## Review Flow
+### Review Flow
 
 ```text
 User
-
- ↓
-
+  |
+  v
 CLI
-
- ↓
-
+  |
+  v
 Review Service
-
- ↓
-
-Learning Algorithm
-
- ↓
-
-Select Word
-
- ↓
-
-Load WordContent
-
- ↓
-
-Display
-
- ↓
-
-Record Result
-
- ↓
-
-Update LearningState
+  |
+  v
+Select Due LearningItem
+  |
+  v
+Load Item Content and FSRS State
+  |
+  v
+Collect Again / Hard / Good / Easy
+  |
+  v
+FSRS Algorithm Module
+  |
+  +---- Update LearningState
+  |
+  +---- Create ReviewRecord
 ```
 
----
-
-## Import Flow
+### Import Flow
 
 ```text
-CSV File
-
- ↓
-
-Import Service
-
- ↓
-
-Create Word
-
- ↓
-
-Create WordContent
-
- ↓
-
-Save Database
+External File
+  |
+  v
+Parser
+  |
+  v
+Configured ImportStrategy
+  |
+  v
+Create LearningItem
+  |
+  v
+Create LearningItemContent
+  |
+  v
+Save through Repositories
 ```
 
----
+## Deletion Rules
 
-# Extension Design
+Deleting a LearningItem deletes:
 
-The architecture supports adding new capabilities through modules.
+- its LearningItemContent records;
+- its tag associations;
+- its LearningState records;
+- its ReviewRecord history;
+- references to it from RelatedMeanings modules.
 
-Examples:
+Deleting a Tag removes tag associations but does not delete any LearningItem.
 
-## New Content Module
+Soft deletion and recovery are outside the initial scope.
 
-```text
-Add ModuleDefinition
-
-        ↓
-
-Create WordContent
-```
-
-No changes to Word.
-
----
-
-## New Learning Algorithm
-
-```text
-Add LearningAlgorithm
-
-        ↓
-
-Create LearningState
-```
-
-No changes to Word.
-
----
-
-# Initial Implementation
+## Initial Implementation
 
 The first implementation focuses on:
 
 ```text
 CLI
-
-Word Management
-
-Module System
-
-Basic Review Algorithm
-
-SQLite Database
+LearningItem management
+Content modules
+RelatedMeanings module
+Complete FSRS module
+Append-only import strategy
+SQLite database
 ```
 
-The architecture keeps future extensions possible while maintaining a simple initial implementation.
+The architecture keeps content, scheduling, import policy, persistence, and interface concerns independently replaceable.

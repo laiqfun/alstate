@@ -1,3 +1,2 @@
 export * from "./content/index.js";
-export * from "./word/index.js";
-
+export * from "./importing/index.js";

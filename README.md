@@ -2,15 +2,15 @@
 
 Alstate is a modular learning-state engine for building adaptive learning applications.
 
-It is intended to support applications such as vocabulary trainers and flashcard systems by separating learning state, scheduling decisions, content modules, and user interfaces into independent layers.
+It is intended to support applications such as vocabulary trainers and flashcard systems by separating learning items, scheduling decisions, content modules, import policies, and user interfaces into independent layers.
 
 > Alstate is currently in the scaffolding stage. The architecture is defined, but business features and public APIs have not yet been implemented.
 
 ## Current Scope
 
-The current architecture and data model are designed specifically around **learning English vocabulary**. Concepts such as `Word`, `WordContent`, meanings, example sentences, tags, and word-review records reflect this initial use case.
+The first application profile is designed around **learning English vocabulary**, while the core architecture uses reusable learning-item, module, algorithm, and repository contracts.
 
-Alstate may evolve into a more general learning-state engine in the future, but the present structure should not be treated as a content-agnostic learning model. Generalizing beyond vocabulary learning would require a separate design decision and corresponding changes to the domain model.
+In the vocabulary profile, one `LearningItem` represents one English meaning of a spelling. Its `word` value is not an identity or uniqueness key: two items may both contain `bank` while representing different meanings. Meanings, examples, translations, and links to other meanings are supplied by content modules attached directly to the item.
 
 ## Goals
 
@@ -23,9 +23,10 @@ Within the English-vocabulary learning scenario, Alstate is designed to help app
 The initial implementation will focus on:
 
 - a command-line interface;
-- word management;
-- extensible word-content modules;
-- a basic review algorithm;
+- learning-item management for English meanings;
+- extensible item-content modules;
+- a complete FSRS algorithm module;
+- an extensible import-strategy contract with append-only default behavior;
 - SQLite persistence.
 
 ## Architecture
@@ -37,11 +38,11 @@ CLI
  |
 Application
  |
-+----------------+----------------+
-|                |                |
-Word modules     Learning         Content modules
-|                |                |
-+----------------+----------------+
++----------------+----------------+----------------+
+|                |                |                |
+Learning items   Learning         Content modules  Import strategies
+|                |                |                |
++----------------+----------------+----------------+
  |
 Repository contracts
  |
@@ -53,8 +54,8 @@ SQLite / file storage
 ### Layers
 
 - **Domain** contains core entities and repository contracts. It does not depend on databases or interfaces.
-- **Modules** organizes the word system and extensible word-content modules.
-- **Learning** contains learning algorithms and learning-state concepts.
+- **Modules** organizes extensible item-content modules and developer-provided import strategies.
+- **Learning** contains the learning-algorithm contract, the FSRS module, and learning-state concepts.
 - **Application** coordinates use cases without handling presentation or persistence details.
 - **Infrastructure** provides concrete integrations such as SQLite repositories and file storage.
 - **Interfaces** receives user input and presents results. The first interface will be a CLI.
@@ -81,10 +82,12 @@ alstate/
 │  │  └─ cli/
 │  ├─ learning/
 │  │  ├─ algorithms/
+│  │  │  └─ fsrs/
 │  │  └─ state/
 │  ├─ modules/
 │  │  ├─ content/
-│  │  └─ word/
+│  │  │  └─ related-meanings/
+│  │  └─ importing/
 │  └─ index.ts
 ├─ package.json
 ├─ tsconfig.json
@@ -135,8 +138,10 @@ The CLI currently exits without output because commands have not yet been implem
 
 - Keep the domain independent of databases, interfaces, and external services.
 - Depend on repository contracts rather than concrete storage implementations.
-- Add content types through modules without changing the core Word entity.
+- Treat each independently scheduled meaning as a LearningItem; never infer item identity from `word`.
+- Add content types through modules without changing the LearningItem structure.
 - Allow learning algorithms to define and evolve their own state structures.
+- Keep import identity and conflict rules behind a developer-provided strategy contract.
 - Keep interface code free of learning and persistence logic.
 
 ## Development Status

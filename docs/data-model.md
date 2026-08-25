@@ -1,340 +1,260 @@
 # Alstate Data Model Design
 
-> **Current scope:** This data model is designed for learning English vocabulary. `Word` is the central learning item, and the surrounding content and learning-state relationships are word-oriented. A future content-agnostic model would require a separate redesign.
+> **Current profile:** The stored learning unit is a `LearningItem`. In the English-vocabulary profile, each LearningItem represents one English meaning of a spelling. The architecture keeps content and learning algorithms modular so that other profiles can reuse the same core contracts.
 
 ## Design Overview
 
-Alstate uses a modular data model.
+Core entities:
 
-The core entities are:
+- LearningItem: independently scheduled learning unit;
+- ModuleDefinition: content-module definition;
+- LearningItemContent: module instance attached directly to an item;
+- Tag: reusable label;
+- LearningItemTag: many-to-many item/tag association;
+- LearningAlgorithm: registered scheduling-algorithm definition;
+- LearningState: current algorithm state for an item;
+- ReviewRecord: immutable review event.
 
-- Word: vocabulary entity
-- ModuleDefinition: content module definition
-- WordContent: content module instance attached to a word
-- Tag: reusable labels
-- WordTag: relationship between words and tags
-- LearningAlgorithm: learning algorithm definition
-- LearningState: current learning state
-- ReviewRecord: learning history records
+ImportStrategy is an application extension contract rather than a persisted entity.
 
----
+## LearningItem
 
-# Word
+### Description
 
-## Description
+A LearningItem is the identity and deletion boundary for something learned independently.
 
-Represents an independent vocabulary entity.
+For English vocabulary, each row represents one English meaning. The `word` value is case-sensitive and is not unique. Words and phrases use the same representation.
 
-A Word only represents the word itself.
-
-It does not contain:
-
-- meanings
-- examples
-- tags
-- learning states
-
-## Schema
+### Schema
 
 ```sql
-Word
-----
+LearningItem
+------------
 id              PK
-word            TEXT
+word            TEXT NOT NULL
 ```
 
 Example:
 
-| id | word |
-| --- | --- |
-| 1 | distinction |
+| id | word | represented meaning |
+| --- | --- | --- |
+| 101 | bank | a financial institution |
+| 102 | bank | the side of a river |
+| 103 | Apple | a proper name |
+| 104 | apple | a fruit |
 
----
+Only `id` identifies the LearningItem. `word` must not be used for deduplication or foreign-key relationships.
 
-# ModuleDefinition
+## ModuleDefinition
 
-## Description
+### Description
 
-Defines available content modules.
+Defines an available content module and the schema of its data. Developers can add modules without changing LearningItem.
 
-A module is created by developers and has a fixed data structure.
-
-Different modules can have different schemas.
-
-Examples:
-
-- Chinese meaning
-- English meaning
-- Example sentence
-- Memory note
-- Audio
-
-## Schema
+### Schema
 
 ```sql
 ModuleDefinition
 ----------------
 id              PK
-
-name            UNIQUE
-
-schema          JSON
-
-description
-
-version
+name            TEXT UNIQUE NOT NULL
+schema          JSON NOT NULL
+description     TEXT
+version         TEXT NOT NULL
 ```
 
-Example:
+Initial content-module types include:
 
-Chinese Meaning Module:
+- EnglishMeaning;
+- ChineseMeaning;
+- Example;
+- Audio;
+- MemoryNote;
+- RelatedMeanings.
 
-```json
-{
-    "name": "ChineseMeaning",
-    "schema": {
-        "meaning": "string"
-    }
-}
-```
+## LearningItemContent
 
-Example Sentence Module:
+### Description
 
-```json
-{
-    "name": "Example",
-    "schema": {
-        "sentence": "string",
-        "translation": "string",
-        "source": "string"
-    }
-}
-```
+Represents a content-module instance attached directly to a LearningItem.
 
----
+EnglishMeaning, ChineseMeaning, Example, and other contents are siblings. No content record is the structural parent of another.
 
-# WordContent
-
-## Description
-
-Represents an instance of a content module attached to a Word.
-
-A Word can contain multiple WordContent records.
-
-Each WordContent references a ModuleDefinition and stores data following that module's schema.
-
-## Schema
+### Schema
 
 ```sql
-WordContent
------------
-id              PK
-
-word_id         FK -> Word.id
-
-module_id       FK -> ModuleDefinition.id
-
-data            JSON
-
-order_index
+LearningItemContent
+-------------------
+id                  PK
+learning_item_id    FK -> LearningItem.id ON DELETE CASCADE
+module_id           FK -> ModuleDefinition.id
+data                JSON NOT NULL
+order_index         INTEGER NOT NULL
 ```
 
-Example:
-
-Word:
-
-```
-distinction
-```
-
-Content modules:
+Example for LearningItem `101`:
 
 | module | data | order |
 | --- | --- | --- |
-| ChineseMeaning | {"meaning":"区别"} | 1 |
-| Example | {"sentence":"There is a distinction between AI and AGI."} | 2 |
-| MemoryNote | {"note":"distinction is different from direction"} | 3 |
+| EnglishMeaning | `{ "meaning": "a financial institution" }` | 1 |
+| ChineseMeaning | `{ "meaning": "银行" }` | 2 |
+| Example | `{ "sentence": "She deposited money at the bank." }` | 3 |
+| RelatedMeanings | `{ "learningItemIds": [102] }` | 4 |
 
----
+### RelatedMeanings
 
-# Tag
+The RelatedMeanings module stores references to other LearningItem IDs representing other meanings of the same spelling.
 
-## Description
+Its module implementation is responsible for:
 
-Defines reusable labels.
+- validating that referenced items exist;
+- preventing self-references;
+- validating the same-word rule for the vocabulary profile;
+- removing stale references when a target LearningItem is deleted.
 
-Examples:
+## Tag
 
-- CET6
-- TOEFL
-- Computer Science
-- Academic
-
-## Schema
+### Schema
 
 ```sql
 Tag
 ---
 id              PK
-
-name            UNIQUE
-
-description
+name            TEXT UNIQUE NOT NULL
+description     TEXT
 ```
 
----
+## LearningItemTag
 
-# WordTag
+### Description
 
-## Description
+Represents the many-to-many relationship between LearningItem and Tag.
 
-Represents the many-to-many relationship between Word and Tag.
-
-A Word can have multiple Tags.
-
-A Tag can belong to multiple Words.
-
-## Schema
+### Schema
 
 ```sql
-WordTag
--------
-word_id         FK -> Word.id
+LearningItemTag
+---------------
+learning_item_id    FK -> LearningItem.id ON DELETE CASCADE
+tag_id              FK -> Tag.id ON DELETE CASCADE
 
-tag_id          FK -> Tag.id
+PRIMARY KEY (learning_item_id, tag_id)
 ```
 
-Example:
+Deleting a Tag removes these associations and does not delete LearningItems.
 
-```
-distinction
+## LearningAlgorithm
 
-    |
-    +---- CET6
-    |
-    +---- Computer Science
-```
+### Description
 
----
+Registers a scheduling algorithm and the configuration needed to interpret its state.
 
-# LearningAlgorithm
-
-## Description
-
-Defines available learning algorithms.
-
-Different algorithms can use different learning strategies and states.
-
-Examples:
-
-- SM2
-- Spaced Repetition
-- AI Adaptive Learning
-
-## Schema
+### Schema
 
 ```sql
 LearningAlgorithm
 -----------------
 id              PK
-
-name            UNIQUE
-
-description
-
-version
+name            TEXT UNIQUE NOT NULL
+description     TEXT
+version         TEXT NOT NULL
+config_data     JSON NOT NULL
 ```
 
----
+The initial algorithm is the complete FSRS implementation. Its stored version must distinguish algorithm and adapter upgrades.
 
-# LearningState
+## LearningState
 
-## Description
+### Description
 
-Stores the current learning state of a Word under a specific learning algorithm.
+Stores the current state of one LearningItem under one learning algorithm.
 
-Different algorithms can have different state structures.
-
-## Schema
+### Schema
 
 ```sql
 LearningState
 -------------
-id              PK
+id                  PK
+learning_item_id    FK -> LearningItem.id ON DELETE CASCADE
+algorithm_id        FK -> LearningAlgorithm.id
+state_data          JSON NOT NULL
 
-word_id         FK -> Word.id
-
-algorithm_id    FK -> LearningAlgorithm.id
-
-state_data      JSON
+UNIQUE (learning_item_id, algorithm_id)
 ```
 
-Example:
+For FSRS, `state_data` preserves the complete card state returned by the selected FSRS implementation rather than a project-specific subset.
 
-SM2:
+## ReviewRecord
 
-```json
-{
-    "review_count": 5,
-    "last_review": "2026-08-25",
-    "next_review": "2026-09-01",
-    "difficulty": 3
-}
-```
+### Description
 
----
+Stores an immutable review event for a LearningItem. Deleting the LearningItem deletes its review history.
 
-# ReviewRecord
-
-## Description
-
-Stores historical learning events.
-
-Each review operation creates one record.
-
-## Schema
+### Schema
 
 ```sql
 ReviewRecord
 ------------
-id              PK
-
-word_id         FK -> Word.id
-
-algorithm_id    FK -> LearningAlgorithm.id
-
-result
-
-response_time
-
-created_at
+id                  PK
+learning_item_id    FK -> LearningItem.id ON DELETE CASCADE
+algorithm_id        FK -> LearningAlgorithm.id
+rating              INTEGER NOT NULL
+review_data         JSON NOT NULL
+response_time_ms    INTEGER
+reviewed_at         TEXT NOT NULL
 ```
 
-Example:
+For FSRS, ratings are:
 
-```json
-{
-    "result": "wrong",
-    "answer": "direction"
-}
+```text
+1 = Again
+2 = Hard
+3 = Good
+4 = Easy
 ```
 
----
+`review_data` preserves the complete FSRS review log needed for history, replay, analysis, and future parameter optimization.
 
-# Entity Relationship
+## Import Contract
 
+Import behavior is provided through an ImportStrategy contract.
+
+The default append-only strategy follows these rules:
+
+- every valid source record creates a new LearningItem ID;
+- all valid content belonging to that record is written;
+- no comparison by `word` is performed;
+- no automatic skip, overwrite, merge, or conflict warning is performed.
+
+Developers can provide custom strategies later. The strategy is responsible for defining identity and conflict behavior for its own source format.
+
+## Deletion Ownership
+
+```text
+LearningItem
+   |
+   +---- LearningItemContent       DELETE CASCADE
+   +---- LearningItemTag           DELETE CASCADE
+   +---- LearningState             DELETE CASCADE
+   +---- ReviewRecord              DELETE CASCADE
 ```
-                    ModuleDefinition
-                           |
-                           |
-Word ------------ WordContent
+
+RelatedMeanings references to a deleted LearningItem must also be removed by the module implementation.
+
+## Entity Relationship
+
+```text
+                         ModuleDefinition
+                                |
+                                |
+LearningItem -------- LearningItemContent
 
 
-Word ------------ WordTag ------------ Tag
+LearningItem -------- LearningItemTag -------- Tag
 
 
-Word ------------ LearningState ------ LearningAlgorithm
+LearningItem -------- LearningState ---------- LearningAlgorithm
 
 
-Word ------------ ReviewRecord
+LearningItem -------- ReviewRecord ----------- LearningAlgorithm
 ```
