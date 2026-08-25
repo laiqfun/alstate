@@ -59,6 +59,7 @@ ModuleDefinition
 id              PK
 name            TEXT UNIQUE NOT NULL
 schema          JSON NOT NULL
+cardinality     TEXT NOT NULL
 description     TEXT
 version         TEXT NOT NULL
 ```
