@@ -1,5 +1,7 @@
 # Alstate
 
+English | [简体中文](README.zh-CN.md)
+
 > Experimental: the packages are in `0.x`; public APIs and persisted state may
 > change before `1.0`.
 

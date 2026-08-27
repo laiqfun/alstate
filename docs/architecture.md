@@ -1,5 +1,7 @@
 # Architecture
 
+English | [简体中文](architecture.zh-CN.md)
+
 ## Package boundaries
 
 Alstate separates orchestration from concrete policy and infrastructure:

@@ -1,5 +1,7 @@
 # SQLite data model
 
+English | [简体中文](data-model.zh-CN.md)
+
 `@alstate/sqlite` persists four engine concepts plus schema migration history.
 
 ## Learning item
