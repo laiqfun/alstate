@@ -1,6 +1,9 @@
 node_modules/
 dist/
 .test-dist/
+.example-dist/
+.integration-dist/
+pack-test/
 .alstate/
 coverage/
 *.tsbuildinfo

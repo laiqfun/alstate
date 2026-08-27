@@ -1,0 +1,36 @@
+{
+  "name": "@alstate/fsrs",
+  "version": "0.1.0",
+  "description": "First-party ts-fsrs adapter for Alstate.",
+  "keywords": ["learning", "scheduling", "fsrs", "spaced-repetition"],
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "README.md", "LICENSE"],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsc --project tsconfig.build.json",
+    "clean": "node --eval \"require('node:fs').rmSync('dist', { recursive: true, force: true }); require('node:fs').rmSync('.test-dist', { recursive: true, force: true })\"",
+    "test": "tsc --project tsconfig.test.json && node --test \".test-dist/test/**/*.test.js\"",
+    "typecheck": "tsc --project tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@alstate/core": "0.1.0",
+    "ts-fsrs": "^5.4.1"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/laiqfun/alstate.git",
+    "directory": "packages/fsrs"
+  },
+  "homepage": "https://github.com/laiqfun/alstate#readme",
+  "bugs": { "url": "https://github.com/laiqfun/alstate/issues" },
+  "publishConfig": { "access": "public" }
+}
