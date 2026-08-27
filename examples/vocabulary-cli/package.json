@@ -1,0 +1,19 @@
+{
+  "name": "@alstate/vocabulary-example",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --project tsconfig.build.json",
+    "clean": "node --eval \"require('node:fs').rmSync('dist', { recursive: true, force: true }); require('node:fs').rmSync('.test-dist', { recursive: true, force: true })\"",
+    "start": "node dist/main.js",
+    "test": "tsc --project tsconfig.test.json && node --test \".test-dist/test/**/*.test.js\"",
+    "typecheck": "tsc --project tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@alstate/core": "0.1.0",
+    "@alstate/fsrs": "0.1.0",
+    "@alstate/sqlite": "0.1.0"
+  },
+  "engines": { "node": ">=22.13.0" }
+}

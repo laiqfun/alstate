@@ -2,37 +2,34 @@
   "name": "alstate",
   "version": "0.0.0",
   "private": true,
-  "description": "A small, pluggable learning scheduling engine.",
-  "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    }
+  "description": "Workspace for the Alstate headless learning scheduling runtime.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/laiqfun/alstate.git"
   },
-  "files": [
-    "dist",
-    "docs"
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "examples/*"
   ],
   "scripts": {
-    "build": "tsc --project tsconfig.build.json",
-    "check": "npm run typecheck && npm run build && npm test",
-    "clean": "node --eval \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
-    "preexample:vocabulary": "node --eval \"require('node:fs').rmSync('.example-dist', { recursive: true, force: true })\" && tsc --project tsconfig.example.json",
-    "example:vocabulary": "node .example-dist/examples/vocabulary-cli/main.js",
-    "prebuild": "npm run clean",
-    "pretest": "node --eval \"require('node:fs').rmSync('.test-dist', { recursive: true, force: true })\"",
-    "test": "tsc --project tsconfig.test.json && node --test \".test-dist/test/**/*.test.js\"",
-    "typecheck": "tsc --project tsconfig.json --noEmit"
+    "build": "npm run build -w @alstate/core && npm run build -w @alstate/sqlite && npm run build -w @alstate/fsrs && npm run build -w @alstate/vocabulary-example",
+    "check": "npm run clean && npm run build && npm run check:boundaries && npm run typecheck && npm test",
+    "check:boundaries": "node scripts/check-boundaries.mjs",
+    "clean": "npm run clean --workspaces --if-present && node --eval \"require('node:fs').rmSync('.integration-dist', { recursive: true, force: true })\"",
+    "example:vocabulary": "npm run start -w @alstate/vocabulary-example --",
+    "preexample:vocabulary": "npm run build",
+    "test": "npm run test -w @alstate/core && npm run test -w @alstate/sqlite && npm run test -w @alstate/fsrs && npm run test -w @alstate/vocabulary-example && npm run test:integration",
+    "test:integration": "tsc --project tsconfig.integration.json && node --test \".integration-dist/test/integration/**/*.test.js\"",
+    "typecheck": "npm run typecheck --workspaces --if-present && tsc --project tsconfig.integration.json --noEmit",
+    "verify:packages": "npm run build && node scripts/verify-packages.mjs"
   },
   "engines": {
     "node": ">=22.13.0"
   },
   "devDependencies": {
     "@types/node": "^26.3.0",
-    "ts-fsrs": "^5.4.1",
     "typescript": "^7.0.2"
   }
 }

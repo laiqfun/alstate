@@ -1,141 +1,107 @@
 # Alstate
 
-Alstate is a small, embeddable learning scheduling engine.
+> Experimental: the packages are in `0.x`; public APIs and persisted state may
+> change before `1.0`.
 
-## What is the engine?
+Alstate is a headless, embeddable learning scheduling runtime. It coordinates
+application-owned items, a scheduling algorithm, durable state and immutable
+review history without defining a content model or user interface.
 
-The engine is the stable workflow between an application, a scheduling
-algorithm and persistent state:
+## Packages
+
+| Package | Responsibility |
+| --- | --- |
+| `@alstate/core` | Storage- and algorithm-independent engine workflow and contracts. |
+| `@alstate/sqlite` | SQLite implementation of the core store contract. |
+| `@alstate/fsrs` | First-party adapter from `ts-fsrs` to the core algorithm contract. |
+
+The packages have one-way dependencies:
 
 ```text
-application data
-      |
-      v
-LearningEngine ---- injected LearningAlgorithm
-      |
-      v
- LearningStore ---- SQLite or another adapter
+@alstate/core
+   ^          ^
+   |          |
+sqlite      fsrs ---> ts-fsrs
+   ^          ^
+    \        /
+ vocabulary example
 ```
 
-It is not a vocabulary framework, flashcard UI or FSRS wrapper. It does not
-decide what is learned or how scheduling works.
+## Quick start
 
-## What does it own?
-
-The engine has four responsibilities:
-
-1. Give each independently scheduled item an identity and store its opaque JSON
-   data.
-2. Ask an injected algorithm to initialize, preview and update scheduling state.
-3. Find due items and commit state changes together with immutable review
-   records.
-4. Hide persistence details behind one `LearningStore` interface.
-
-The engine deliberately does not own:
-
-- words, meanings, prompts, answers, audio or other content schemas;
-- FSRS or any other concrete scheduling algorithm;
-- tags, decks, import conflict policies or external file formats;
-- CLI, HTTP, rendering or interaction logic;
-- users and authentication. One store represents one learning-state namespace;
-  multi-user hosts scope stores themselves.
-
-## Public API
-
-Applications work through one `LearningEngine` facade:
+```bash
+npm install @alstate/core @alstate/sqlite @alstate/fsrs
+```
 
 ```ts
-const engine = await LearningEngine.create({ store, algorithm });
+import { LearningEngine } from "@alstate/core";
+import { FsrsAlgorithm } from "@alstate/fsrs";
+import { SqliteLearningStore } from "@alstate/sqlite";
+
+const engine = await LearningEngine.create({
+  store: new SqliteLearningStore("learning.db"),
+  algorithm: new FsrsAlgorithm(),
+});
 
 const item = await engine.add({ prompt: "2 + 2", answer: "4" });
-await engine.get(item.id);
-await engine.list();
-await engine.update(item.id, { prompt: "2 + 2", answer: "four" });
-await engine.due();
+const due = await engine.due();
 await engine.review(item.id, "good");
 await engine.history(item.id);
-await engine.remove(item.id);
-
 engine.close();
 ```
 
-These eight operations are the engine surface. Application-specific workflows
-are composed outside the engine.
+An engine instance is bound to one registered algorithm. Item operations are
+scoped to that algorithm, and concurrent reviews use optimistic state revisions
+so stale transitions cannot overwrite newer state.
 
-## Injecting an algorithm
+## Scope
 
-The package exports only the `LearningAlgorithm` protocol. An implementation
-supplies its identity, configuration, ratings and pure state transitions:
+Alstate owns:
 
-```ts
-const engine = await LearningEngine.create({
-  store: new SqliteLearningStore("learning.db"),
-  algorithm: myAlgorithm,
-});
-```
+- item identity and opaque JSON application data;
+- algorithm initialization, due preview and review coordination;
+- atomic item-plus-state and state-plus-review persistence boundaries;
+- algorithm identity, configuration and version safety;
+- adapter contracts for scheduling algorithms and stores.
 
-Alstate refuses to silently replace an already registered algorithm with a
-different version or configuration, because that would reinterpret stored
-state. Algorithm migration must be explicit.
+Alstate does not own content schemas, tags, decks, import formats, users,
+authentication, rendering, CLI or HTTP policy.
 
-## SQLite
+## Repository
 
-`SqliteLearningStore` is an optional built-in storage adapter. The engine itself
-depends only on `LearningStore`, so another adapter can implement the same
-composite persistence operations and transaction guarantees.
-
-## Runnable example
-
-[`examples/vocabulary-cli`](examples/vocabulary-cli) is a complete consumer of
-the engine. It owns its vocabulary schema, JSON import format, CLI and FSRS
-adapter, then injects that adapter into `LearningEngine`.
-
-```bash
-npm run example:vocabulary -- help
-npm run example:vocabulary -- item:add bank
-```
-
-The example is not exported by the package.
-
-## Project structure
+This repository is an npm workspace. There is intentionally no root `src/`:
+each publishable package owns its source, tests and build output.
 
 ```text
-src/
-├─ index.ts
-├─ learning-engine.ts
-├─ learning-algorithm.ts
-├─ learning-store.ts
-├─ types.ts
-├─ errors.ts
-└─ sqlite/
-   ├─ migrations.ts
-   └─ sqlite-learning-store.ts
-
+packages/core/
+packages/sqlite/
+packages/fsrs/
 examples/vocabulary-cli/
-├─ algorithm/
-├─ app/
-├─ cli/
-├─ domain/
-├─ infrastructure/
-├─ main.ts
-└─ README.md
+test/integration/
 ```
 
-See [Architecture](docs/architecture.md) and [Data model](docs/data-model.md).
+The vocabulary CLI is a private workspace used for integration testing and is
+not published.
 
 ## Development
 
-Requires Node.js 22.13 or later.
+Node.js 22.13 or later is required for the SQLite adapter.
 
 ```bash
 npm install
 npm run check
+npm run example:vocabulary -- help
 ```
 
-| Command | Description |
-| --- | --- |
-| `npm run typecheck` | Type-check the engine, example and tests. |
-| `npm run build` | Build only the engine into `dist/`. |
-| `npm test` | Run engine, SQLite, migration and example tests. |
-| `npm run check` | Run type-checking, build and all tests. |
-| `npm run example:vocabulary -- help` | Run the vocabulary application. |
+See [architecture](docs/architecture.md) and the [SQLite data model](docs/data-model.md).
+
+## Versioning
+
+The three public packages use lockstep versions during `0.x`. Registering an
+algorithm with a changed version or configuration is rejected rather than
+silently reinterpreting persisted state. A general algorithm-state migration API
+is not part of `0.1.0`.
+
+## License
+
+MIT

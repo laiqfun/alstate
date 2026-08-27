@@ -1,6 +1,6 @@
-# Engine data model
+# SQLite data model
 
-The SQLite adapter persists four engine concepts.
+`@alstate/sqlite` persists four engine concepts plus schema migration history.
 
 ## Learning item
 
@@ -11,8 +11,8 @@ id          INTEGER PRIMARY KEY
 data_json   JSON NOT NULL
 ```
 
-`data_json` belongs to the embedding application. The engine does not reserve or
-index any field inside it.
+`data_json` belongs to the embedding application. Item access is scoped through
+the item's algorithm state; the engine never interprets its fields.
 
 ## Registered algorithm
 
@@ -27,7 +27,7 @@ config_json   JSON NOT NULL
 ```
 
 An existing name may be registered again only with the same version and
-configuration.
+canonical JSON configuration.
 
 ## Learning state
 
@@ -37,13 +37,15 @@ engine_states
 id                  INTEGER PRIMARY KEY
 learning_item_id    FK -> engine_items.id ON DELETE CASCADE
 algorithm_id        FK -> engine_algorithms.id
+revision             INTEGER NOT NULL DEFAULT 0
 due_at               TEXT NOT NULL
 state_json           JSON NOT NULL
 UNIQUE (learning_item_id, algorithm_id)
 ```
 
-`due_at` is an indexed projection used for due queries. The injected algorithm
-owns `state_json`.
+`due_at` is an indexed projection for due queries. The algorithm owns
+`state_json`. `revision` is incremented on every successful review and is used
+for optimistic concurrency control.
 
 ## Review record
 
@@ -54,20 +56,29 @@ id                  INTEGER PRIMARY KEY
 learning_item_id    FK -> engine_items.id ON DELETE CASCADE
 algorithm_id        FK -> engine_algorithms.id
 rating              TEXT NOT NULL
-review_json         JSON NOT NULL
+review_json          JSON NOT NULL
 response_time_ms    INTEGER
-reviewed_at         TEXT NOT NULL
+reviewed_at          TEXT NOT NULL
 ```
 
 Review records are append-only during an item's lifetime. Removing an item also
-removes its state and history.
+removes its state and review history.
 
-## Transaction boundaries
+## Atomic review commit
 
-Two writes must be atomic:
+The adapter updates state with the equivalent of:
 
-1. creating an item and its initial state;
-2. updating state and appending the corresponding review record.
+```sql
+UPDATE engine_states
+SET due_at = ?, state_json = ?, revision = revision + 1
+WHERE id = ? AND revision = ?;
+```
 
-These are composite `LearningStore` operations rather than transactions exposed
-to every application caller.
+If no row changes, the adapter raises a concurrency error and does not append a
+review record. Both operations run in one SQLite transaction.
+
+## Migrations
+
+Applied versions are recorded in `engine_schema_migrations`. Version 1 creates
+the engine schema; version 2 adds state revisions. Migrations are ordered,
+idempotent and individually transactional.

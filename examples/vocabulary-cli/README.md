@@ -1,21 +1,19 @@
 # Vocabulary CLI example
 
-This is a runnable application built on Alstate. Nothing in this directory is
-part of the engine package API.
-
-## Structure
+This private workspace is a runnable consumer of all three Alstate packages. It
+is not published and none of its vocabulary model or CLI is part of the engine
+API.
 
 ```text
-algorithm/fsrs.ts                  concrete scheduling adapter
-app/create-app.ts                  composition root
-cli/run-cli.ts                     command handling
-domain/vocabulary-item.ts          vocabulary data and validation
-infrastructure/read-import-file.ts JSON input adapter
-main.ts                            executable entry point
+src/app/create-app.ts                  composition root
+src/cli/run-cli.ts                     command handling
+src/domain/vocabulary-item.ts          vocabulary data and validation
+src/infrastructure/read-import-file.ts JSON input adapter
+src/main.ts                            executable entry point
 ```
 
-The application stores its complete vocabulary record in the engine's opaque
-item data. FSRS is implemented here and injected at composition time.
+Scheduling comes from `@alstate/fsrs`; persistence comes from
+`@alstate/sqlite`. The complete vocabulary record is stored as opaque item data.
 
 ## Run
 
@@ -29,7 +27,7 @@ npm run example:vocabulary -- review good
 Data defaults to `.alstate/vocabulary-example.db`. Override it with
 `ALSTATE_VOCABULARY_DB_PATH`.
 
-## Import format
+Import accepts a JSON array such as:
 
 ```json
 [
@@ -42,5 +40,3 @@ Data defaults to `.alstate/vocabulary-example.db`. Override it with
   }
 ]
 ```
-
-Import is application code rather than an engine strategy.
