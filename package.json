@@ -2,10 +2,15 @@
   "name": "alstate",
   "version": "0.0.0",
   "private": true,
-  "description": "A modular learning-state engine.",
+  "description": "A small, pluggable learning scheduling engine.",
   "type": "module",
-  "bin": {
-    "alstate": "./dist/interfaces/cli/main.js"
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
   },
   "files": [
     "dist",
@@ -15,10 +20,10 @@
     "build": "tsc --project tsconfig.build.json",
     "check": "npm run typecheck && npm run build && npm test",
     "clean": "node --eval \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
-    "dev": "tsx src/interfaces/cli/main.ts",
+    "preexample:vocabulary": "node --eval \"require('node:fs').rmSync('.example-dist', { recursive: true, force: true })\" && tsc --project tsconfig.example.json",
+    "example:vocabulary": "node .example-dist/examples/vocabulary-cli/main.js",
     "prebuild": "npm run clean",
     "pretest": "node --eval \"require('node:fs').rmSync('.test-dist', { recursive: true, force: true })\"",
-    "start": "node dist/interfaces/cli/main.js",
     "test": "tsc --project tsconfig.test.json && node --test \".test-dist/test/**/*.test.js\"",
     "typecheck": "tsc --project tsconfig.json --noEmit"
   },
@@ -27,10 +32,7 @@
   },
   "devDependencies": {
     "@types/node": "^26.3.0",
-    "tsx": "^4.23.12",
+    "ts-fsrs": "^5.4.1",
     "typescript": "^7.0.2"
-  },
-  "dependencies": {
-    "ts-fsrs": "^5.4.1"
   }
 }

@@ -1,166 +1,141 @@
 # Alstate
 
-Alstate is a modular learning-state engine for building adaptive learning applications.
+Alstate is a small, embeddable learning scheduling engine.
 
-It is intended to support applications such as vocabulary trainers and flashcard systems by separating learning items, scheduling decisions, content modules, import policies, and user interfaces into independent layers.
+## What is the engine?
 
-> Alstate is currently an early MVP. Its data model and APIs may still change.
-
-## Current Scope
-
-The first application profile is designed around **learning English vocabulary**, while the core architecture uses reusable learning-item, module, algorithm, and repository contracts.
-
-In the vocabulary profile, one `LearningItem` represents one English meaning of a spelling. Its `word` value is not an identity or uniqueness key: two items may both contain `bank` while representing different meanings. Meanings, examples, translations, and links to other meanings are supplied by content modules attached directly to the item.
-
-## Goals
-
-Within the English-vocabulary learning scenario, Alstate is designed to help applications answer three questions:
-
-- What should a learner study next?
-- When should an item be reviewed again?
-- How should learner feedback update its learning state?
-
-The MVP includes:
-
-- a command-line interface;
-- learning-item management for English meanings;
-- extensible item-content modules;
-- a complete FSRS algorithm module;
-- an extensible import-strategy contract with append-only default behavior;
-- SQLite persistence.
-
-## Architecture
-
-The project follows a layered architecture:
+The engine is the stable workflow between an application, a scheduling
+algorithm and persistent state:
 
 ```text
-CLI
- |
-Application
- |
-+----------------+----------------+----------------+
-|                |                |                |
-Learning items   Learning         Content modules  Import strategies
-|                |                |                |
-+----------------+----------------+----------------+
- |
-Repository contracts
- |
-Infrastructure
- |
-SQLite / file storage
+application data
+      |
+      v
+LearningEngine ---- injected LearningAlgorithm
+      |
+      v
+ LearningStore ---- SQLite or another adapter
 ```
 
-### Layers
+It is not a vocabulary framework, flashcard UI or FSRS wrapper. It does not
+decide what is learned or how scheduling works.
 
-- **Domain** contains core entities and repository contracts. It does not depend on databases or interfaces.
-- **Modules** organizes extensible item-content modules and developer-provided import strategies.
-- **Learning** contains the learning-algorithm contract, the FSRS module, and learning-state concepts.
-- **Application** coordinates use cases without handling presentation or persistence details.
-- **Infrastructure** provides concrete integrations such as SQLite repositories and file storage.
-- **Interfaces** receives user input and presents results. The first interface will be a CLI.
+## What does it own?
 
-See [Architecture Design](docs/architecture.md) and [Data Model Design](docs/data-model.md) for the current design.
+The engine has four responsibilities:
 
-### FSRS
+1. Give each independently scheduled item an identity and store its opaque JSON
+   data.
+2. Ask an injected algorithm to initialize, preview and update scheduling state.
+3. Find due items and commit state changes together with immutable review
+   records.
+4. Hide persistence details behind one `LearningStore` interface.
 
-The built-in FSRS adapter uses the official [`ts-fsrs`](https://github.com/open-spaced-repetition/ts-fsrs) implementation. It exposes all four FSRS ratings, preserves the complete card state and review log as JSON, records the implementation version, and keeps third-party types behind Alstate's own learning-algorithm contract.
+The engine deliberately does not own:
 
-## Project Structure
+- words, meanings, prompts, answers, audio or other content schemas;
+- FSRS or any other concrete scheduling algorithm;
+- tags, decks, import conflict policies or external file formats;
+- CLI, HTTP, rendering or interaction logic;
+- users and authentication. One store represents one learning-state namespace;
+  multi-user hosts scope stores themselves.
+
+## Public API
+
+Applications work through one `LearningEngine` facade:
+
+```ts
+const engine = await LearningEngine.create({ store, algorithm });
+
+const item = await engine.add({ prompt: "2 + 2", answer: "4" });
+await engine.get(item.id);
+await engine.list();
+await engine.update(item.id, { prompt: "2 + 2", answer: "four" });
+await engine.due();
+await engine.review(item.id, "good");
+await engine.history(item.id);
+await engine.remove(item.id);
+
+engine.close();
+```
+
+These eight operations are the engine surface. Application-specific workflows
+are composed outside the engine.
+
+## Injecting an algorithm
+
+The package exports only the `LearningAlgorithm` protocol. An implementation
+supplies its identity, configuration, ratings and pure state transitions:
+
+```ts
+const engine = await LearningEngine.create({
+  store: new SqliteLearningStore("learning.db"),
+  algorithm: myAlgorithm,
+});
+```
+
+Alstate refuses to silently replace an already registered algorithm with a
+different version or configuration, because that would reinterpret stored
+state. Algorithm migration must be explicit.
+
+## SQLite
+
+`SqliteLearningStore` is an optional built-in storage adapter. The engine itself
+depends only on `LearningStore`, so another adapter can implement the same
+composite persistence operations and transaction guarantees.
+
+## Runnable example
+
+[`examples/vocabulary-cli`](examples/vocabulary-cli) is a complete consumer of
+the engine. It owns its vocabulary schema, JSON import format, CLI and FSRS
+adapter, then injects that adapter into `LearningEngine`.
+
+```bash
+npm run example:vocabulary -- help
+npm run example:vocabulary -- item:add bank
+```
+
+The example is not exported by the package.
+
+## Project structure
 
 ```text
-alstate/
-├─ docs/
-│  ├─ architecture.md
-│  └─ data-model.md
-├─ src/
-│  ├─ application/
-│  │  └─ services/
-│  ├─ domain/
-│  │  ├─ entities/
-│  │  └─ repositories/
-│  ├─ infrastructure/
-│  │  ├─ database/
-│  │  └─ files/
-│  ├─ interfaces/
-│  │  └─ cli/
-│  ├─ learning/
-│  │  ├─ algorithms/
-│  │  │  └─ fsrs/
-│  │  └─ state/
-│  ├─ modules/
-│  │  ├─ content/
-│  │  │  └─ related-meanings/
-│  │  └─ importing/
-│  └─ index.ts
-├─ test/
-│  ├─ application/
-│  ├─ domain/
-│  ├─ infrastructure/
-│  ├─ interfaces/
-│  ├─ learning/
-│  └─ modules/
-├─ package.json
-├─ tsconfig.json
-├─ tsconfig.build.json
-└─ tsconfig.test.json
+src/
+├─ index.ts
+├─ learning-engine.ts
+├─ learning-algorithm.ts
+├─ learning-store.ts
+├─ types.ts
+├─ errors.ts
+└─ sqlite/
+   ├─ migrations.ts
+   └─ sqlite-learning-store.ts
+
+examples/vocabulary-cli/
+├─ algorithm/
+├─ app/
+├─ cli/
+├─ domain/
+├─ infrastructure/
+├─ main.ts
+└─ README.md
 ```
 
-The source tree contains the complete MVP implementation; future features should continue to respect these layer boundaries.
+See [Architecture](docs/architecture.md) and [Data model](docs/data-model.md).
 
-## Requirements
+## Development
 
-- Node.js 22.13 or later
-- npm
-
-## Getting Started
-
-Install the development dependencies:
+Requires Node.js 22.13 or later.
 
 ```bash
 npm install
+npm run check
 ```
-
-Show the CLI help during development:
-
-```bash
-npm run dev -- help
-```
-
-Build and run the compiled entry point:
-
-```bash
-npm run build
-npm start
-```
-
-By default, data is stored in `.alstate/alstate.db` under the current working directory. Set `ALSTATE_DB_PATH` to use another database file.
-
-See the [CLI Guide](docs/cli.md) for commands, module schemas, a complete workflow, and the JSON import format.
-
-## Scripts
 
 | Command | Description |
 | --- | --- |
-| `npm run dev` | Run the TypeScript CLI entry point. |
-| `npm run check` | Run type checking, build, and all tests. |
-| `npm run typecheck` | Check TypeScript types without emitting files. |
-| `npm run build` | Compile the project into `dist/`. |
-| `npm start` | Run the compiled CLI entry point. |
-| `npm test` | Compile and run the Node.js test suite. |
-
-## Design Principles
-
-- Keep the domain independent of databases, interfaces, and external services.
-- Depend on repository contracts rather than concrete storage implementations.
-- Treat each independently scheduled meaning as a LearningItem; never infer item identity from `word`.
-- Add content types through modules without changing the LearningItem structure.
-- Allow learning algorithms to define and evolve their own state structures.
-- Keep import identity and conflict rules behind a developer-provided strategy contract.
-- Keep interface code free of learning and persistence logic.
-
-## Development Status
-
-The English-vocabulary learning CLI MVP is implemented. It includes modular content, RelatedMeanings validation, append-only JSON import, complete FSRS scheduling, SQLite persistence, transactional application services, and end-to-end tests.
-
-The data model and APIs are still subject to change.
+| `npm run typecheck` | Type-check the engine, example and tests. |
+| `npm run build` | Build only the engine into `dist/`. |
+| `npm test` | Run engine, SQLite, migration and example tests. |
+| `npm run check` | Run type-checking, build and all tests. |
+| `npm run example:vocabulary -- help` | Run the vocabulary application. |

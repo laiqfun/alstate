@@ -2,7 +2,7 @@
   "extends": "./tsconfig.json",
   "compilerOptions": {
     "rootDir": ".",
-    "outDir": ".test-dist",
+    "outDir": ".example-dist",
     "declaration": false,
     "declarationMap": false,
     "sourceMap": true,
@@ -10,7 +10,9 @@
   },
   "include": [
     "src/**/*.ts",
-    "examples/**/*.ts",
+    "examples/**/*.ts"
+  ],
+  "exclude": [
     "test/**/*.ts"
   ]
 }
