@@ -84,3 +84,10 @@ review record. Both operations run in one SQLite transaction.
 Applied versions are recorded in `engine_schema_migrations`. Version 1 creates
 the engine schema; version 2 adds state revisions. Migrations are ordered,
 idempotent and individually transactional.
+
+## Related documentation
+
+- [Documentation home](README.md)
+- [First-party adapters](adapters.md)
+- [Architecture](architecture.md)
+- [API reference](api-reference.md)

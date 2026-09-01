@@ -11,9 +11,9 @@
     "typecheck": "tsc --project tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@alstate/core": "0.1.0",
-    "@alstate/fsrs": "0.1.0",
-    "@alstate/sqlite": "0.1.0"
+    "@alstate/core": "0.1.1",
+    "@alstate/fsrs": "0.1.1",
+    "@alstate/sqlite": "0.1.1"
   },
   "engines": { "node": ">=22.13.0" }
 }

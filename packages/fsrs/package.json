@@ -1,6 +1,6 @@
 {
   "name": "@alstate/fsrs",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "First-party ts-fsrs adapter for Alstate.",
   "keywords": ["learning", "scheduling", "fsrs", "spaced-repetition"],
   "type": "module",
@@ -21,7 +21,7 @@
     "typecheck": "tsc --project tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@alstate/core": "0.1.0",
+    "@alstate/core": "0.1.1",
     "ts-fsrs": "^5.4.1"
   },
   "license": "MIT",

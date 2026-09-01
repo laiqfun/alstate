@@ -1,6 +1,6 @@
 {
   "name": "@alstate/sqlite",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "SQLite persistence adapter for Alstate.",
   "keywords": ["learning", "scheduling", "sqlite", "spaced-repetition"],
   "type": "module",
@@ -20,7 +20,7 @@
     "test": "tsc --project tsconfig.test.json && node --test \".test-dist/test/**/*.test.js\"",
     "typecheck": "tsc --project tsconfig.json --noEmit"
   },
-  "dependencies": { "@alstate/core": "0.1.0" },
+  "dependencies": { "@alstate/core": "0.1.1" },
   "engines": { "node": ">=22.13.0" },
   "license": "MIT",
   "repository": {

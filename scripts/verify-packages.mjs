@@ -49,9 +49,9 @@ try {
         private: true,
         type: "module",
         dependencies: {
-          "@alstate/core": "file:../packs/alstate-core-0.1.0.tgz",
-          "@alstate/fsrs": "file:../packs/alstate-fsrs-0.1.0.tgz",
-          "@alstate/sqlite": "file:../packs/alstate-sqlite-0.1.0.tgz",
+          "@alstate/core": "file:../packs/alstate-core-0.1.1.tgz",
+          "@alstate/fsrs": "file:../packs/alstate-fsrs-0.1.1.tgz",
+          "@alstate/sqlite": "file:../packs/alstate-sqlite-0.1.1.tgz",
           "ts-fsrs": "file:../packs/ts-fsrs-5.4.1.tgz",
         },
       },

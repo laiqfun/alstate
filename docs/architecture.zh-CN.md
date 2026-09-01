@@ -42,7 +42,7 @@ FsrsAlgorithm            SqliteLearningStore
 版本和规范化后的相同配置再次打开，从而避免已有状态被意外地重新解释。
 
 不同算法可以共用同一个物理存储，但学习项目操作彼此隔离。将学习项目转移到另一个
-算法属于迁移操作，不在 `0.1.0` API 的范围内。
+算法属于迁移操作，不在 `0.1.x` API 的范围内。
 
 ## 存储契约
 
@@ -64,3 +64,10 @@ FsrsAlgorithm            SqliteLearningStore
 
 内容结构、标签、牌组、导入、用户、身份验证、界面和交互流程均属于应用策略。私有的
 词汇 CLI 展示了一种完整组合方式，但不会扩张引擎的公开 API。
+
+## 相关文档
+
+- [文档首页](README.zh-CN.md)
+- [快速上手](getting-started.zh-CN.md)
+- [API 参考](api-reference.zh-CN.md)
+- [扩展 Alstate](extending.zh-CN.md)

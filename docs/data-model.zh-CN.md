@@ -81,3 +81,10 @@ WHERE id = ? AND revision = ?;
 
 已执行的迁移版本记录在 `engine_schema_migrations` 中。版本 1 创建引擎表结构，
 版本 2 增加状态版本号。迁移按顺序执行、可重复调用，并且每个迁移都在独立事务中完成。
+
+## 相关文档
+
+- [文档首页](README.zh-CN.md)
+- [官方适配器](adapters.zh-CN.md)
+- [架构说明](architecture.zh-CN.md)
+- [API 参考](api-reference.zh-CN.md)

@@ -48,7 +48,7 @@ This prevents accidental state reinterpretation.
 
 Different algorithms may share one physical store, but their item operations
 are isolated. Moving an item to another algorithm is a migration operation and
-is deliberately outside the `0.1.0` API.
+is deliberately outside the `0.1.x` API.
 
 ## Store contract
 
@@ -73,3 +73,10 @@ package and owns only the Alstate adapter, JSON state format and date conversion
 Content schemas, tags, decks, imports, users, authentication, interfaces and
 interaction flows remain application policy. The private vocabulary CLI shows
 one possible composition without expanding the engine API.
+
+## Related documentation
+
+- [Documentation home](README.md)
+- [Getting started](getting-started.md)
+- [API reference](api-reference.md)
+- [Extending Alstate](extending.md)

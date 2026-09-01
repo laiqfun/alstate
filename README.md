@@ -5,19 +5,36 @@ English | [简体中文](README.zh-CN.md)
 > Experimental: the packages are in `0.x`; public APIs and persisted state may
 > change before `1.0`.
 
-Alstate is a headless, embeddable learning scheduling runtime. It coordinates
-application-owned items, a scheduling algorithm, durable state and immutable
-review history without defining a content model or user interface.
+Alstate is a headless, embeddable learning scheduling runtime. It gives an
+application one consistent workflow for items, due queues, scheduling state and
+review history while leaving the content model and user experience entirely to
+the application.
+
+Use it to add spaced repetition or another learning schedule to a CLI, desktop
+app, server or service without adopting a card schema, deck system or UI
+framework.
+
+## What Alstate owns
+
+- item identity and opaque JSON application data;
+- algorithm initialization, due previews and review transitions;
+- atomic item-plus-state and state-plus-review persistence boundaries;
+- immutable review history and optimistic review concurrency;
+- algorithm identity, configuration and version safety;
+- contracts for custom algorithms and stores.
+
+Your application owns questions, words, media, tags, decks, imports, users,
+authentication, rendering and interaction policy.
 
 ## Packages
 
 | Package | Responsibility |
 | --- | --- |
 | `@alstate/core` | Storage- and algorithm-independent engine workflow and contracts. |
-| `@alstate/sqlite` | SQLite implementation of the core store contract. |
+| `@alstate/sqlite` | Durable local implementation of the core store contract. |
 | `@alstate/fsrs` | First-party adapter from `ts-fsrs` to the core algorithm contract. |
 
-The packages have one-way dependencies:
+The dependency direction is one-way:
 
 ```text
 @alstate/core
@@ -31,6 +48,8 @@ sqlite      fsrs ---> ts-fsrs
 
 ## Quick start
 
+The first-party stack requires Node.js 22.13 or later and an ESM project.
+
 ```bash
 npm install @alstate/core @alstate/sqlite @alstate/fsrs
 ```
@@ -41,35 +60,42 @@ import { FsrsAlgorithm } from "@alstate/fsrs";
 import { SqliteLearningStore } from "@alstate/sqlite";
 
 const engine = await LearningEngine.create({
-  store: new SqliteLearningStore("learning.db"),
-  algorithm: new FsrsAlgorithm(),
+  store: new SqliteLearningStore("data/learning.db"),
+  algorithm: new FsrsAlgorithm({ requestRetention: 0.9 }),
 });
 
-const item = await engine.add({ prompt: "2 + 2", answer: "4" });
-const due = await engine.due();
-await engine.review(item.id, "good");
-await engine.history(item.id);
-engine.close();
+try {
+  const item = await engine.add({ prompt: "2 + 2", answer: "4" });
+  const [next] = await engine.due(new Date(), 20);
+
+  if (next !== undefined) {
+    console.log(next.preview); // next due time for every rating
+    await engine.review(next.item.id, "good", { responseTimeMs: 1_200 });
+  }
+
+  console.log(await engine.history(item.id));
+} finally {
+  engine.close();
+}
 ```
 
-An engine instance is bound to one registered algorithm. Item operations are
-scoped to that algorithm, and concurrent reviews use optimistic state revisions
-so stale transitions cannot overwrite newer state.
+Each engine instance is bound to one registered algorithm. Item operations are
+scoped to that algorithm. A review updates state and appends history atomically;
+stale concurrent transitions cannot overwrite a newer revision.
 
-## Scope
+## Documentation
 
-Alstate owns:
+- [Documentation home](docs/README.md): what to read for each use case;
+- [Getting started](docs/getting-started.md): installation and the complete
+  application workflow;
+- [API reference](docs/api-reference.md): every public package export;
+- [First-party adapters](docs/adapters.md): SQLite behavior and FSRS options;
+- [Extending Alstate](docs/extending.md): custom algorithms and stores;
+- [Architecture](docs/architecture.md): boundaries and consistency guarantees;
+- [SQLite data model](docs/data-model.md): schema and migrations;
+- [Vocabulary CLI](examples/vocabulary-cli/README.md): runnable consumer example.
 
-- item identity and opaque JSON application data;
-- algorithm initialization, due preview and review coordination;
-- atomic item-plus-state and state-plus-review persistence boundaries;
-- algorithm identity, configuration and version safety;
-- adapter contracts for scheduling algorithms and stores.
-
-Alstate does not own content schemas, tags, decks, import formats, users,
-authentication, rendering, CLI or HTTP policy.
-
-## Repository
+## Repository development
 
 This repository is an npm workspace. There is intentionally no root `src/`:
 each publishable package owns its source, tests and build output.
@@ -82,12 +108,8 @@ examples/vocabulary-cli/
 test/integration/
 ```
 
-The vocabulary CLI is a private workspace used for integration testing and is
+The vocabulary CLI is a private workspace used as an executable example and is
 not published.
-
-## Development
-
-Node.js 22.13 or later is required for the SQLite adapter.
 
 ```bash
 npm install
@@ -95,14 +117,12 @@ npm run check
 npm run example:vocabulary -- help
 ```
 
-See [architecture](docs/architecture.md) and the [SQLite data model](docs/data-model.md).
+## Compatibility
 
-## Versioning
-
-The three public packages use lockstep versions during `0.x`. Registering an
-algorithm with a changed version or configuration is rejected rather than
-silently reinterpreting persisted state. A general algorithm-state migration API
-is not part of `0.1.0`.
+The three public packages use lockstep versions during `0.x`. Reopening a stored
+algorithm with a changed version or effective configuration is rejected rather
+than silently reinterpreting state. A general algorithm-state migration API is
+not part of the `0.1.x` API.
 
 ## License
 
